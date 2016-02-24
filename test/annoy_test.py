@@ -413,3 +413,6 @@ class MemoryLeakTest(TestCase):
         i.build(10)
         for j in xrange(100):
             self.assertEquals(i.get_nns_by_item(0, 999999999), [0])
+
+if __name__ == '__main__':
+    unittest.main()

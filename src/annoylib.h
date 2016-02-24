@@ -96,7 +96,7 @@ inline void two_means(const vector<Node*>& nodes, int f, Random& random, bool co
     points to either one of them. We weight each centroid by the number of points
     assigned to it, so to balance it. 
   */
-  static int iteration_steps = 200;
+  size_t iteration_steps = 200;
   size_t count = nodes.size();
 
   size_t i = random.index(count);
@@ -107,7 +107,7 @@ inline void two_means(const vector<Node*>& nodes, int f, Random& random, bool co
   if (cosine) { normalize(&iv[0], f); normalize(&jv[0], f); }
 
   int ic = 1, jc = 1;
-  for (int l = 0; l < iteration_steps; l++) {
+  for (int l = 0; l < std::max(iteration_steps, count/10); l++) {
     size_t k = random.index(count);
     T di = ic * Distance::distance(&iv[0], nodes[k]->v, f),
       dj = jc * Distance::distance(&jv[0], nodes[k]->v, f);
@@ -176,8 +176,26 @@ struct Angular {
     else
       return random.flip();
   }
+  
   template<typename S, typename T, typename Random>
-  static inline void create_split(const vector<Node<S, T>*>& nodes, int f, Random& random, Node<S, T>* n) {
+  static inline void create_split_random(const vector<Node<S, T>*>& nodes, int f, Random& random, Node<S, T>* n) {
+    // Sample two random points from the set of nodes
+    // Calculate the hyperplane equidistant from them
+    size_t count = nodes.size();
+    size_t i = random.index(count);
+    size_t j = random.index(count-1);
+    j += (j >= i); // ensure that i != j
+    T* iv = nodes[i]->v;
+    T* jv = nodes[j]->v;
+    T i_norm = get_norm(iv, f);
+    T j_norm = get_norm(jv, f);
+    for (int z = 0; z < f; z++)
+      n->v[z] = iv[z] / i_norm - jv[z] / j_norm;
+    normalize(n->v, f);
+  }
+  
+  template<typename S, typename T, typename Random>
+  static inline void create_split_two_means(const vector<Node<S, T>*>& nodes, int f, Random& random, Node<S, T>* n) {
     vector<T> best_iv(f, 0), best_jv(f, 0); // TODO: avoid allocation
     two_means<T, Random, Angular, Node<S, T> >(nodes, f, random, true, &best_iv[0], &best_jv[0]);
     for (int z = 0; z < f; z++)
@@ -222,8 +240,26 @@ struct Euclidean {
     else
       return random.flip();
   }
+  
   template<typename S, typename T, typename Random>
-  static inline void create_split(const vector<Node<S, T>*>& nodes, int f, Random& random, Node<S, T>* n) {
+  static inline void create_split_random(const vector<Node<S, T>*>& nodes, int f, Random& random, Node<S, T>* n) {
+    // Same as Angular version, but no normalization and has to compute the offset too
+    size_t count = nodes.size();
+    size_t i = random.index(count);
+    size_t j = random.index(count-1);
+    j += (j >= i); // ensure that i != j
+    T* iv = nodes[i]->v;
+    T* jv = nodes[j]->v;
+    for (int z = 0; z < f; z++)
+      n->v[z] = iv[z] - jv[z];
+    normalize(n->v, f);
+    n->a = 0.0;
+    for (int z = 0; z < f; z++)
+      n->a += -n->v[z] * (iv[z] + jv[z]) / 2;
+  }
+  
+  template<typename S, typename T, typename Random>
+  static inline void create_split_two_means(const vector<Node<S, T>*>& nodes, int f, Random& random, Node<S, T>* n) {
     vector<T> best_iv(f, 0), best_jv(f, 0);
     two_means<T, Random, Euclidean, Node<S, T> >(nodes, f, random, false, &best_iv[0], &best_jv[0]);
 
@@ -479,17 +515,31 @@ protected:
         children.push_back(n);
     }
 
-    vector<S> children_indices[2];
     Node* m = (Node*)malloc(_s); // TODO: avoid
-    D::create_split(children, _f, _random, m);
+    vector<S> children_indices[2];
+    for (int attempt = 0; attempt < 20; attempt ++) {
 
-    for (size_t i = 0; i < indices.size(); i++) {
-      S j = indices[i];
-      Node* n = _get(j);
-      if (n) {
-        bool side = D::side(m, n->v, _f, _random);
-        children_indices[side].push_back(j);
-      }
+        if (attempt < 10) {
+            D::create_split_two_means(children, _f, _random, m);
+        } else {
+            D::create_split_random(children, _f, _random, m);           
+        }
+
+        for (size_t i = 0; i < indices.size(); i++) {
+            S j = indices[i];
+            Node* n = _get(j);
+            if (n) {
+                bool side = D::side(m, n->v, _f, _random);
+                children_indices[side].push_back(j);
+            }
+        }
+        
+        if (children_indices[0].size() > 0 && children_indices[1].size() > 0) {
+            break;
+        }
+        
+        children_indices[0].clear();
+        children_indices[1].clear();
     }
 
     // If we didn't find a hyperplane, just randomize sides as a last option
