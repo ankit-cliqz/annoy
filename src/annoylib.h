@@ -326,6 +326,7 @@ public:
     _s = offsetof(Node, v) + f * sizeof(T); // Size of each node
     _verbose = false;
     _K = (_s - offsetof(Node, children)) / sizeof(S); // Max number of descendants to fit into node
+    showUpdate("K at build time = %d\n", _K);
     reinitialize(); // Reset everything
   }
   ~AnnoyIndex() {
