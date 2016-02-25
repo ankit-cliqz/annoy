@@ -53,6 +53,7 @@
   // TODO: this is turned on by default, but may not work for all architectures! Need to investigate.
 #endif
 
+#define MAP_POPULATE
 
 using std::vector;
 using std::string;
