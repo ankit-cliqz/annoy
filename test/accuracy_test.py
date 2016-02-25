@@ -103,3 +103,6 @@ class AccuracyTest(unittest.TestCase):
     @attr('slow')
     def test_euclidean_100(self):
         self._test_index(100, 'euclidean', 56.16)
+        
+if __name__ == '__main__':
+    unittest.main()
