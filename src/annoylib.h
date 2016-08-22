@@ -364,6 +364,8 @@ public:
       if (_verbose) showUpdate("pass %zd...\n", _roots.size());
 
       vector<S> indices;
+      indices.reserve(_n_items); 
+
       for (S i = 0; i < _n_items; i++)
         indices.push_back(i);
 
