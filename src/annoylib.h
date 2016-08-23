@@ -329,13 +329,16 @@ public:
     _K = (_s - offsetof(Node, children)) / sizeof(S); // Max number of descendants to fit into node
     showUpdate("K at build time = %d\n", _K);
     reinitialize(); // Reset everything
+
+    _allocate_size(6500000000, true);
   }
+
+
   ~AnnoyIndex() {
     unload();
   }
 
   void add_item(S item, const T* w) {
-    _allocate_size(item + 1);
     Node* n = _get(item);
 
     n->children[0] = 0;
@@ -479,17 +482,21 @@ public:
   }
 
 protected:
-  void _allocate_size(S n) {
-    if (n > _nodes_size) {
-      const double reallocation_factor = 1.3;
-      S new_nodes_size = std::max(n,
-				  (S)((_nodes_size + 1) * reallocation_factor));
-      if (_verbose) showUpdate("Reallocating to %d nodes\n", new_nodes_size);
-      _nodes = realloc(_nodes, _s * new_nodes_size);
-      memset((char *)_nodes + (_nodes_size * _s)/sizeof(char), 0, (new_nodes_size - _nodes_size) * _s);
-      _nodes_size = new_nodes_size;
-    }
+  void _allocate_size(S n, bool preallocation=false) {
+    if (preallocation == true) {
+	    if (n > _nodes_size) {
+	      const double reallocation_factor = 1.0;
+	      S new_nodes_size = std::max(n,
+					  (S)((_nodes_size + 1) * reallocation_factor));
+	      if (_verbose) showUpdate("Reallocating to %d nodes\n", new_nodes_size);
+	      _nodes = realloc(_nodes, _s * new_nodes_size);
+	      memset((char *)_nodes + (_nodes_size * _s)/sizeof(char), 0, (new_nodes_size - _nodes_size) * _s);
+	      _nodes_size = new_nodes_size;
+	    }
+	}
   }
+
+
 
   inline Node* _get(S i) {
     return (Node*)((uint8_t *)_nodes + (_s * i));
