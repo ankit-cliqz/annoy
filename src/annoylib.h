@@ -330,7 +330,7 @@ public:
     showUpdate("K at build time = %d\n", _K);
     reinitialize(); // Reset everything
 
-    _allocate_size(6500000000, true);
+    _allocate_size_start(650000000);
   }
 
 
@@ -450,7 +450,7 @@ public:
     if (_roots.size() > 1 && _get(_roots.front())->children[0] == _get(_roots.back())->children[0])
       _roots.pop_back();
     _loaded = true;
-    _n_items = m;
+    _n_items = m;	
     if (_verbose) showUpdate("found %lu roots with degree %d\n", _roots.size(), m);
     return true;
   }
@@ -482,10 +482,9 @@ public:
   }
 
 protected:
-  void _allocate_size(S n, bool preallocation=false) {
-    if (preallocation == true) {
+  void _allocate_size(S n) {
 	    if (n > _nodes_size) {
-	      const double reallocation_factor = 1.0;
+	      const double reallocation_factor = 1.3;
 	      S new_nodes_size = std::max(n,
 					  (S)((_nodes_size + 1) * reallocation_factor));
 	      if (_verbose) showUpdate("Reallocating to %d nodes\n", new_nodes_size);
@@ -493,10 +492,15 @@ protected:
 	      memset((char *)_nodes + (_nodes_size * _s)/sizeof(char), 0, (new_nodes_size - _nodes_size) * _s);
 	      _nodes_size = new_nodes_size;
 	    }
-	}
   }
 
 
+  void _allocate_size_start(S n) {
+	      if (_verbose) showUpdate("Preallocating %d nodes\n", n);
+	      _nodes = realloc(_nodes, _s * n);
+	      memset((char *)_nodes + (_nodes_size * _s)/sizeof(char), 0, (n - _nodes_size) * _s);
+	      _nodes_size = n;
+  }
 
   inline Node* _get(S i) {
     return (Node*)((uint8_t *)_nodes + (_s * i));
