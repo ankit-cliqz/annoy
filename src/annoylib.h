@@ -149,7 +149,7 @@ struct Angular {
     else return 2.0; // cos is 0
   }
   template<typename S, typename T>
-  static inline T margin(const Node<S, T>* n, const T* y, int f) {
+  static inline float margin(const Node<S, T>* n, const T* y, int f) {
     T dot = 0;
     for (int z = 0; z < f; z++)
       dot += n->v[z] * y[z];
@@ -157,7 +157,7 @@ struct Angular {
   }
   template<typename S, typename T, typename Random>
   static inline bool side(const Node<S, T>* n, const T* y, int f, Random& random) {
-    T dot = margin(n, y, f);
+    float dot = margin(n, y, f);
     if (dot != 0)
       return (dot > 0);
     else
@@ -245,8 +245,8 @@ class AnnoyIndexInterface {
   virtual void unload() = 0;
   virtual bool load(const char* filename) = 0;
   virtual T get_distance(S i, S j) = 0;
-  virtual void get_nns_by_item(S item, size_t n, size_t search_k, vector<S>* result, vector<T>* distances) = 0;
-  virtual void get_nns_by_vector(const T* w, size_t n, size_t search_k, vector<S>* result, vector<T>* distances) = 0;
+  virtual void get_nns_by_item(S item, size_t n, size_t search_k, vector<S>* result, vector<float>* distances) = 0;
+  virtual void get_nns_by_vector(const T* w, size_t n, size_t search_k, vector<S>* result, vector<float>* distances) = 0;
   virtual S get_n_items() = 0;
   virtual void verbose(bool v) = 0;
   virtual void get_item(S item, T* v) = 0;
@@ -432,12 +432,12 @@ public:
     return D::normalized_distance(D::distance(x, y, _f));
   }
 
-  void get_nns_by_item(S item, size_t n, size_t search_k, vector<S>* result, vector<T>* distances) {
+  void get_nns_by_item(S item, size_t n, size_t search_k, vector<S>* result, vector<float>* distances) {
     const Node* m = _get(item);
     _get_all_nns(m->v, n, search_k, result, distances);
   }
 
-  void get_nns_by_vector(const T* w, size_t n, size_t search_k, vector<S>* result, vector<T>* distances) {
+  void get_nns_by_vector(const T* w, size_t n, size_t search_k, vector<S>* result, vector<float>* distances) {
     _get_all_nns(w, n, search_k, result, distances);
   }
   S get_n_items() {
@@ -544,8 +544,8 @@ protected:
     return item;
   }
 
-  void _get_all_nns(const T* v, size_t n, size_t search_k, vector<S>* result, vector<T>* distances) {
-    std::priority_queue<pair<T, S> > q;
+  void _get_all_nns(const T* v, size_t n, size_t search_k, vector<S>* result, vector<float>* distances) {
+    std::priority_queue<pair<S, S> > q;
 
     if (search_k == (size_t)-1)
       search_k = n * _roots.size(); // slightly arbitrary default value
@@ -556,7 +556,7 @@ protected:
 
     vector<S> nns;
     while (nns.size() < search_k && !q.empty()) {
-      const pair<T, S>& top = q.top();
+      const pair<S, S>& top = q.top();
       T d = top.first;
       S i = top.second;
       Node* nd = _get(i);
@@ -567,9 +567,9 @@ protected:
         const S* dst = nd->children;
         nns.insert(nns.end(), dst, &dst[nd->n_descendants]);
       } else {
-        T margin = D::margin(nd, v, _f);
-        q.push(make_pair(std::min(d, +margin), nd->children[1]));
-        q.push(make_pair(std::min(d, -margin), nd->children[0]));
+        float margin = D::margin(nd, v, _f);
+        q.push(make_pair(std::min(float(d), +margin), nd->children[1]));
+        q.push(make_pair(std::min(float(d), -margin), nd->children[0]));
       }
     }
 

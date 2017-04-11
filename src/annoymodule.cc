@@ -33,13 +33,13 @@
 #endif
 
 
-template class AnnoyIndexInterface<int32_t, float>;
+template class AnnoyIndexInterface<int32_t, char>;
 
 // annoy python object
 typedef struct {
   PyObject_HEAD
   int f;
-  AnnoyIndexInterface<int32_t, float>* ptr;
+  AnnoyIndexInterface<int32_t, char>* ptr;
 } py_annoy;
 
 
@@ -65,10 +65,10 @@ py_an_init(py_annoy *self, PyObject *args, PyObject *kwds) {
     return -1;
   switch(metric[0]) {
   case 'a':
-    self->ptr = new AnnoyIndex<int32_t, float, Angular, Kiss64Random>(self->f);
+    self->ptr = new AnnoyIndex<int32_t, char, Angular, Kiss64Random>(self->f);
     break;
   case 'e':
-    self->ptr = new AnnoyIndex<int32_t, float, Euclidean, Kiss64Random>(self->f);
+    self->ptr = new AnnoyIndex<int32_t, char, Euclidean, Kiss64Random>(self->f);
     break;
   }
   return 0;
@@ -149,23 +149,23 @@ get_nns_to_python(const vector<int32_t>& result, const vector<float>& distances,
 }
 
 
-static PyObject* 
-py_an_get_nns_by_item(py_annoy *self, PyObject *args) {
-  int32_t item, n, search_k=-1, include_distances=0;
-  if (!self->ptr) 
-    Py_RETURN_NONE;
-  if (!PyArg_ParseTuple(args, "ii|ii", &item, &n, &search_k, &include_distances))
-    Py_RETURN_NONE;
+// static PyObject* 
+// py_an_get_nns_by_item(py_annoy *self, PyObject *args) {
+//   int32_t item, n, search_k=-1, include_distances=0;
+//   if (!self->ptr) 
+//     Py_RETURN_NONE;
+//   if (!PyArg_ParseTuple(args, "ii|ii", &item, &n, &search_k, &include_distances))
+//     Py_RETURN_NONE;
 
-  vector<int32_t> result;
-  vector<float> distances;
+//   vector<int32_t> result;
+//   vector<float> distances;
 
-  Py_BEGIN_ALLOW_THREADS;
-  self->ptr->get_nns_by_item(item, n, search_k, &result, include_distances ? &distances : NULL);
-  Py_END_ALLOW_THREADS;
+//   Py_BEGIN_ALLOW_THREADS;
+//   self->ptr->get_nns_by_item(item, n, search_k, &result, include_distances ? &distances : NULL);
+//   Py_END_ALLOW_THREADS;
 
-  return get_nns_to_python(result, distances, include_distances);
-}
+//   return get_nns_to_python(result, distances, include_distances);
+// }
 
 
 static PyObject* 
@@ -177,10 +177,10 @@ py_an_get_nns_by_vector(py_annoy *self, PyObject *args) {
   if (!PyArg_ParseTuple(args, "Oi|ii", &v, &n, &search_k, &include_distances))
     Py_RETURN_NONE;
 
-  vector<float> w(self->f);
+  vector<char> w(self->f);
   for (int z = 0; z < PyList_Size(v) && z < self->f; z++) {
     PyObject *pf = PyList_GetItem(v,z);
-    w[z] = PyFloat_AsDouble(pf);
+    w[z] = *PyString_AsString(pf);
   }
 
   vector<int32_t> result;
@@ -194,23 +194,23 @@ py_an_get_nns_by_vector(py_annoy *self, PyObject *args) {
 }
 
 
-static PyObject* 
-py_an_get_item_vector(py_annoy *self, PyObject *args) {
-  int32_t item;
-  if (!self->ptr) 
-    Py_RETURN_NONE;
-  if (!PyArg_ParseTuple(args, "i", &item))
-    Py_RETURN_NONE;
+// static PyObject* 
+// py_an_get_item_vector(py_annoy *self, PyObject *args) {
+//   int32_t item;
+//   if (!self->ptr) 
+//     Py_RETURN_NONE;
+//   if (!PyArg_ParseTuple(args, "i", &item))
+//     Py_RETURN_NONE;
 
-  vector<float> v(self->f);
-  self->ptr->get_item(item, &v[0]);
-  PyObject* l = PyList_New(self->f);
-  for (int z = 0; z < self->f; z++) {
-    PyList_SetItem(l, z, PyFloat_FromDouble(v[z]));
-  }
+//   vector<char> v(self->f);
+//   self->ptr->get_item(item, &v[0]);
+//   PyObject* l = PyList_New(self->f);
+//   for (int z = 0; z < self->f; z++) {
+//     PyList_SetItem(l, z, PyString_FromString(&v[z]));
+//   }
 
-  return l;
-}
+//   return l;
+// }
 
 
 static PyObject* 
@@ -222,10 +222,10 @@ py_an_add_item(py_annoy *self, PyObject *args) {
   if (!PyArg_ParseTuple(args, "iO", &item, &l))
     Py_RETURN_NONE;
 
-  vector<float> w(self->f, 0.0);
+  vector<char> w(self->f, 0.0);
   for (int z = 0; z < self->f; z++) {
     PyObject *pf = PyList_GetItem(l,z);
-    w[z] = PyFloat_AsDouble(pf);
+    w[z] = *PyString_AsString(pf);
   }
   self->ptr->add_item(item, &w[0]);
 
@@ -327,9 +327,9 @@ py_an_set_seed(py_annoy *self, PyObject *args) {
 static PyMethodDef AnnoyMethods[] = {
   {"load",	(PyCFunction)py_an_load, METH_VARARGS, ""},
   {"save",	(PyCFunction)py_an_save, METH_VARARGS, ""},
-  {"get_nns_by_item",(PyCFunction)py_an_get_nns_by_item, METH_VARARGS, ""},
+  // {"get_nns_by_item",(PyCFunction)py_an_get_nns_by_item, METH_VARARGS, ""},
   {"get_nns_by_vector",(PyCFunction)py_an_get_nns_by_vector, METH_VARARGS, ""},
-  {"get_item_vector",(PyCFunction)py_an_get_item_vector, METH_VARARGS, ""},
+  // {"get_item_vector",(PyCFunction)py_an_get_item_vector, METH_VARARGS, ""},
   {"add_item",(PyCFunction)py_an_add_item, METH_VARARGS, ""},
   {"build",(PyCFunction)py_an_build, METH_VARARGS, ""},
   {"unbuild",(PyCFunction)py_an_unbuild, METH_VARARGS, ""},
