@@ -545,19 +545,19 @@ protected:
   }
 
   void _get_all_nns(const T* v, size_t n, size_t search_k, vector<S>* result, vector<float>* distances) {
-    std::priority_queue<pair<S, S> > q;
+    std::priority_queue<pair<float, S> > q;
 
     if (search_k == (size_t)-1)
       search_k = n * _roots.size(); // slightly arbitrary default value
 
     for (size_t i = 0; i < _roots.size(); i++) {
-      q.push(make_pair(numeric_limits<T>::infinity(), _roots[i]));
+      q.push(make_pair(numeric_limits<float>::infinity(), _roots[i]));
     }
 
     vector<S> nns;
     while (nns.size() < search_k && !q.empty()) {
-      const pair<S, S>& top = q.top();
-      T d = top.first;
+      const pair<float, S>& top = q.top();
+      float d = top.first;
       S i = top.second;
       Node* nd = _get(i);
       q.pop();
@@ -568,8 +568,8 @@ protected:
         nns.insert(nns.end(), dst, &dst[nd->n_descendants]);
       } else {
         float margin = D::margin(nd, v, _f);
-        q.push(make_pair(std::min(float(d), +margin), nd->children[1]));
-        q.push(make_pair(std::min(float(d), -margin), nd->children[0]));
+        q.push(make_pair(std::min(d, +margin), nd->children[1]));
+        q.push(make_pair(std::min(d, -margin), nd->children[0]));
       }
     }
 
