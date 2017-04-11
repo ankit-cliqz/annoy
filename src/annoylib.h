@@ -134,15 +134,15 @@ struct Angular {
     T v[1]; // We let this one overflow intentionally. Need to allocate at least 1 to make GCC happy
   };
   template<typename T>
-  static inline T distance(const T* x, const T* y, int f) {
+  static inline float distance(const T* x, const T* y, int f) {
     // want to calculate (a/|a| - b/|b|)^2
     // = a^2 / a^2 + b^2 / b^2 - 2ab/|a||b|
     // = 2 - 2cos
-    T pp = 0, qq = 0, pq = 0;
+    float pp = 0, qq = 0, pq = 0;
     for (int z = 0; z < f; z++, x++, y++) {
-      pp += (*x) * (*x);
-      qq += (*y) * (*y);
-      pq += (*x) * (*y);
+      pp += (*x/100) * (*x/100);
+      qq += (*y/100) * (*y/100);
+      pq += (*x/100) * (*y/100);
     }
     T ppqq = pp * qq;
     if (ppqq > 0) return 2.0 - 2.0 * pq / sqrt(ppqq);
@@ -150,9 +150,9 @@ struct Angular {
   }
   template<typename S, typename T>
   static inline float margin(const Node<S, T>* n, const T* y, int f) {
-    T dot = 0;
+    float dot = 0;
     for (int z = 0; z < f; z++)
-      dot += n->v[z] * y[z];
+      dot += n->v[z]/100 * y[z]/100;
     return dot;
   }
   template<typename S, typename T, typename Random>
