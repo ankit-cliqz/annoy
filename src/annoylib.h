@@ -330,7 +330,17 @@ public:
     showUpdate("K at build time = %d\n", _K);
     reinitialize(); // Reset everything
 
-    _allocate_size_start(650000000);
+
+    // Read the environment variable which has the preallocation defined.
+    const char* preallocate_size = getenv("ANNOY_PREALLOCATE");
+
+    if(preallocate_size){
+        int preallocate_size_int = atoi(preallocate_size);
+        _allocate_size_start(preallocate_size_int); // Corresponds to (preallocate_size * 400)/(1024 ^ 2)  GB allocation
+    }
+    else {
+        _allocate_size_start(575000000); // Corresponds to 230 GB allocation
+    }
   }
 
 
@@ -498,7 +508,8 @@ protected:
   void _allocate_size_start(S n) {
 	      if (_verbose) showUpdate("Preallocating %d nodes\n", n);
 	      _nodes = realloc(_nodes, _s * n);
-	      memset((char *)_nodes + (_nodes_size * _s)/sizeof(char), 0, (n - _nodes_size) * _s);
+	      // Ankit: Disable memset at the start as we dont need to set all the memory locations to zero.
+	      // memset((char *)_nodes + (_nodes_size * _s)/sizeof(char), 0, (n - _nodes_size) * _s);
 	      _nodes_size = n;
   }
 
