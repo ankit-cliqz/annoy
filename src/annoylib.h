@@ -336,6 +336,7 @@ public:
 
     if(preallocate_size){
         int preallocate_size_int = atoi(preallocate_size);
+        showUpdate("Pre-allocate Size at Build Time = %d\n", preallocate_size_int);
         _allocate_size_start(preallocate_size_int); // Corresponds to (preallocate_size * 400)/(1024 ^ 2)  GB allocation
     }
     else {
